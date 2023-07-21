@@ -1,13 +1,14 @@
 package com.expenseTracker.expenseTrackerBackend.controller;
 
-import com.expenseTracker.expenseTrackerBackend.dto.ExpensesDto;
-import com.expenseTracker.expenseTrackerBackend.dto.IncomeDto;
-import com.expenseTracker.expenseTrackerBackend.dto.ResponseDto;
+import com.expenseTracker.expenseTrackerBackend.dto.*;
 import com.expenseTracker.expenseTrackerBackend.models.*;
 import com.expenseTracker.expenseTrackerBackend.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -44,6 +45,11 @@ public class ExpenseTrackerController {
         return userCategoryService.getUserCategoryForUser(users);
     }
 
+    @GetMapping("view-user/{userId}")
+    public UserDetailsDto getUserById(@PathVariable int userId){
+        return userService.getUserById(userId);
+    }
+
     @PostMapping("save-expense")
     public ResponseDto saveExpense(@RequestBody ExpensesDto expensesDto){
         return expenseService.saveExpense(expensesDto);
@@ -54,9 +60,55 @@ public class ExpenseTrackerController {
         return incomeService.saveIncome(incomeDto);
     }
 
-    @GetMapping("current-month-expenses/{userId}")
+    @GetMapping("current-month-expense-list/{userId}")
     public List<ExpensesDto> currentMonthExpenses(@PathVariable int userId)
     {
        return expenseService.currentMonthExpenses(userId);
     }
+
+    @GetMapping("custom-month-expense-list/{userId}/{date}")
+    public List<ExpensesDto> customMonthExpenses(@PathVariable int userId, @PathVariable LocalDateTime date)
+    {
+        return expenseService.customMonthExpenses(date,userId);
+    }
+    @GetMapping("category-wise-expenses/{userCategoryId}")
+    public List<ExpensesDto> userCategoryWiseExpenses(@PathVariable int userCategoryId)
+    {
+        return expenseService.userCategoryExpenses(userCategoryId);
+    }
+
+    @GetMapping("category-wise-balance/{userId}")
+    public List<CategoryBalanceDto> categoryWiseBalance(@PathVariable int userId){
+        Users users=userService.findById(userId);
+        List<CategoryBalanceDto> categoryBalanceDto=new ArrayList<>();
+        List<UserCategory> userCategories= userCategoryService.getUserCategoryForUser(users);
+        List<ExpensesDto> expensesDto=new ArrayList<>();
+        for(UserCategory userCategory:userCategories){
+            expensesDto=expenseService.userCategoryExpenses(userCategory.getId());
+            long sum=expensesDto.stream().mapToLong(e->e.getAmount()).sum();
+            categoryBalanceDto.add(new CategoryBalanceDto( userCategory.getQuotaThreshold(),userCategory.getId(), userCategory.getQuotaThreshold()-sum));
+        }
+        return categoryBalanceDto;
+    }
+
+    @GetMapping("current-month-total-expense/{userId}")
+    public ExpensesDto currentMonthTotalExpenses(@PathVariable int userId)
+    {
+        ExpensesDto expensesDto=new ExpensesDto();
+        List<ExpensesDto> expensesDtoList= expenseService.currentMonthExpenses(userId);
+        long sum=expensesDtoList.stream().mapToLong(e->e.getAmount()).sum();
+        expensesDto.setAmount(sum);
+        return expensesDto;
+    }
+
+    @GetMapping("prev-months-total-expense/{date}/{userId}")
+    public ExpensesDto prevMonthsTotalExpenses(@PathVariable LocalDateTime date, @PathVariable int userId)
+    {
+        ExpensesDto expensesDto=new ExpensesDto();
+        List<ExpensesDto> expensesDtoList= expenseService.customMonthExpenses(date,userId);
+        long sum=expensesDtoList.stream().mapToLong(e->e.getAmount()).sum();
+        expensesDto.setAmount(sum);
+        return expensesDto;
+    }
+
 }

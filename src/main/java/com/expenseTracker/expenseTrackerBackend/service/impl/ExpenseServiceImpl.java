@@ -62,4 +62,22 @@ public class ExpenseServiceImpl implements ExpenseService {
         List<ExpensesDto> expensesDtos=expensesList.stream().map(e->mapToExpensesDto(e)).collect(Collectors.toList());
         return expensesDtos;
     }
+
+    @Override
+    public List<ExpensesDto> userCategoryExpenses(int userCategoryId) {
+        UserCategory userCategory=userCategoryRepository.findById(userCategoryId);
+        List<Expenses> expenses=expenseRepository.getExpensesByUserCategory(userCategory);
+        List<ExpensesDto> expensesDtos=expenses.stream().map(e->mapToExpensesDto(e)).collect(Collectors.toList());
+        return expensesDtos;
+    }
+
+    @Override
+    public List<ExpensesDto> customMonthExpenses(LocalDateTime date,int userId) {
+        List<Expenses> expenses= expenseRepository.getCurrentMonthExpenses(date);
+        Users users=userRepository.findById(userId);
+        List<Expenses> expensesList= expenses.stream().filter(e->e.getUsers().equals(users)).collect(Collectors.toList());
+        List<ExpensesDto> expensesDtos=expensesList.stream().map(e->mapToExpensesDto(e)).collect(Collectors.toList());
+        return expensesDtos;
+    }
+
 }
